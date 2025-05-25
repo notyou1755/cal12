@@ -1,0 +1,420 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import * as TabsPrimitive from '@radix-ui/react-tabs';
+import * as SliderPrimitive from '@radix-ui/react-silder';
+
+function App() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 py-12 px-4 sm:px-6 lg:px-8">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md mx-auto bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden"
+      >
+        <Tabs defaultValue="bmi" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-white/10">
+            <TabsTrigger value="bmi" className="transition-all data-[state=active]:bg-white/20">
+              BMI Calculator
+            </TabsTrigger>
+            <TabsTrigger value="tip" className="transition-all data-[state=active]:bg-white/20">
+              Tip Calculator
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="bmi">
+            <BMICalculator />
+          </TabsContent>
+          <TabsContent value="tip">
+            <TipCalculator />
+          </TabsContent>
+        </Tabs>
+      </motion.div>
+    </div>
+  );
+}
+
+// BMI Calculator Component
+function BMICalculator() {
+  const [unit, setUnit] = useState('metric');
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const [bmi, setBmi] = useState(null);
+  const [bmiCategory, setBmiCategory] = useState('');
+
+  const calculateBMI = () => {
+    if (!height || !weight) return;
+
+    let h = parseFloat(height);
+    let w = parseFloat(weight);
+
+    if (unit === 'imperial') {
+      h *= 0.0254;
+      w *= 0.453592;
+    } else {
+      h /= 100;
+    }
+
+    const bmiValue = w / (h * h);
+    setBmi(bmiValue.toFixed(1));
+    determineCategory(bmiValue);
+  };
+
+  const determineCategory = (value) => {
+    if (value < 18.5) setBmiCategory('Underweight');
+    else if (value < 25) setBmiCategory('Normal weight');
+    else if (value < 30) setBmiCategory('Overweight');
+    else setBmiCategory('Obese');
+  };
+
+  const getBmiColor = () => {
+    if (!bmi) return 'bg-gray-200';
+    if (bmi < 18.5) return 'bg-blue-400';
+    if (bmi < 25) return 'bg-green-400';
+    if (bmi < 30) return 'bg-yellow-400';
+    return 'bg-red-400';
+  };
+
+  const resetForm = () => {
+    setHeight('');
+    setWeight('');
+    setBmi(null);
+    setBmiCategory('');
+  };
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex bg-white/10 rounded-lg p-1">
+          <button
+            onClick={() => setUnit('metric')}
+            className={`px-4 py-2 rounded-md ${unit === 'metric' ? 'bg-white/20' : ''}`}
+          >
+            Metric
+          </button>
+          <button
+            onClick={() => setUnit('imperial')}
+            className={`px-4 py-2 rounded-md ${unit === 'imperial' ? 'bg-white/20' : ''}`}
+          >
+            Imperial
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="height">{unit === 'metric' ? 'Height (cm)' : 'Height (in)'}</Label>
+          <Input
+            id="height"
+            type="number"
+            value={height}
+            onChange={(e) => setHeight(e.target.value)}
+            placeholder={unit === 'metric' ? '175' : '70'}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="weight">{unit === 'metric' ? 'Weight (kg)' : 'Weight (lbs)'}</Label>
+          <Input
+            id="weight"
+            type="number"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder={unit === 'metric' ? '70' : '154'}
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        <button
+          onClick={calculateBMI}
+          className="flex-1 bg-pink-600 hover:bg-pink-700 text-white py-3 px-4 rounded-lg"
+        >
+          Calculate BMI
+        </button>
+        <button
+          onClick={resetForm}
+          className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-4 rounded-lg"
+        >
+          Reset
+        </button>
+      </div>
+
+      {bmi && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`mt-6 p-6 rounded-lg ${getBmiColor()}`}
+        >
+          <h3 className="text-2xl font-bold text-white text-center">Your BMI: {bmi}</h3>
+          <p className="text-white text-center mt-2">{bmiCategory}</p>
+        </motion.div>
+      )}
+
+      <div className="mt-6 bg-white/10 rounded-lg p-4">
+        <h4 className="text-white font-medium mb-2">BMI Categories:</h4>
+        <ul className="text-white/80 text-sm space-y-1">
+          <li>Underweight: BMI less than 18.5</li>
+          <li>Normal weight: BMI 18.5-24.9</li>
+          <li>Overweight: BMI 25-29.9</li>
+          <li>Obese: BMI 30 or greater</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// Tip Calculator Component
+function TipCalculator() {
+  const [billAmount, setBillAmount] = useState('');
+  const [tipPercentage, setTipPercentage] = useState(15);
+  const [numberOfPeople, setNumberOfPeople] = useState(1);
+  const [customTip, setCustomTip] = useState('');
+
+  const calculateTip = () => {
+    if (!billAmount) return { tipPerPerson: 0, totalPerPerson: 0 };
+
+    const bill = parseFloat(billAmount);
+    let tip = tipPercentage;
+    
+    if (customTip) {
+      tip = parseFloat(customTip);
+    }
+
+    const totalTip = bill * (tip / 100);
+    const totalBill = bill + totalTip;
+    const tipPerPerson = totalTip / numberOfPeople;
+    const totalPerPerson = totalBill / numberOfPeople;
+
+    return {
+      tipPerPerson: tipPerPerson.toFixed(2),
+      totalPerPerson: totalPerPerson.toFixed(2),
+      totalTip: totalTip.toFixed(2),
+      totalBill: totalBill.toFixed(2)
+    };
+  };
+
+  const handlePresetTip = (percentage) => {
+    setTipPercentage(percentage);
+    setCustomTip('');
+  };
+
+  const resetForm = () => {
+    setBillAmount('');
+    setTipPercentage(15);
+    setNumberOfPeople(1);
+    setCustomTip('');
+  };
+
+  const results = calculateTip();
+
+  return (
+    <div className="p-6">
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="billAmount">Bill Amount</Label>
+          <Input
+            id="billAmount"
+            type="number"
+            value={billAmount}
+            onChange={(e) => setBillAmount(e.target.value)}
+            placeholder="100.00"
+            prefix="$"
+          />
+        </div>
+
+        <div>
+          <Label>Tip Percentage</Label>
+          <div className="flex gap-2 mb-3">
+            {[10, 15, 20, 25].map((percentage) => (
+              <button
+                key={percentage}
+                onClick={() => handlePresetTip(percentage)}
+                className={`flex-1 py-2 rounded-md ${
+                  tipPercentage === percentage && !customTip
+                    ? 'bg-pink-600 text-white'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                {percentage}%
+              </button>
+            ))}
+          </div>
+          <Slider
+            value={[tipPercentage]}
+            onValueChange={(value) => {
+              setTipPercentage(value[0]);
+              setCustomTip('');
+            }}
+            min={0}
+            max={50}
+            step={1}
+          />
+          <div className="flex justify-between text-white/80 text-sm mt-1">
+            <span>0%</span>
+            <span>{tipPercentage}%</span>
+            <span>50%</span>
+          </div>
+          <div className="mt-2">
+            <Input
+              type="number"
+              value={customTip}
+              onChange={(e) => {
+                setCustomTip(e.target.value);
+                if (e.target.value) {
+                  setTipPercentage(parseFloat(e.target.value));
+                }
+              }}
+              placeholder="Or enter custom %"
+              suffix="%"
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="people">Number of People</Label>
+          <Input
+            id="people"
+            type="number"
+            value={numberOfPeople}
+            onChange={(e) => setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))}
+            min="1"
+            placeholder="1"
+          />
+        </div>
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        <button
+          onClick={resetForm}
+          className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-4 rounded-lg"
+        >
+          Reset
+        </button>
+      </div>
+
+      {(billAmount && parseFloat(billAmount) > 0) && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-6 bg-white/10 rounded-lg p-6 space-y-4"
+        >
+          <div className="flex justify-between">
+            <span className="text-white/80">Total Tip:</span>
+            <span className="text-white font-medium">${results.totalTip}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/80">Total Bill:</span>
+            <span className="text-white font-medium">${results.totalBill}</span>
+          </div>
+          <div className="h-px bg-white/20 my-2"></div>
+          <div className="flex justify-between">
+            <span className="text-white/80">Tip per Person:</span>
+            <span className="text-white font-medium">${results.tipPerPerson}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/80">Total per Person:</span>
+            <span className="text-pink-400 font-bold">${results.totalPerPerson}</span>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// UI Components
+function Tabs({ defaultValue, className, children, ...props }) {
+  return (
+    <TabsPrimitive.Root
+      className={`flex flex-col w-full ${className}`}
+      defaultValue={defaultValue}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.Root>
+  );
+}
+
+function TabsList({ className, children, ...props }) {
+  return (
+    <TabsPrimitive.List
+      className={`inline-flex items-center justify-center ${className}`}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.List>
+  );
+}
+
+function TabsTrigger({ className, children, ...props }) {
+  return (
+    <TabsPrimitive.Trigger
+      className={`flex-1 inline-flex items-center justify-center whitespace-nowrap px-3 py-2 text-sm font-medium transition-all ${className}`}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.Trigger>
+  );
+}
+
+function TabsContent({ className, children, ...props }) {
+  return (
+    <TabsPrimitive.Content
+      className={`mt-2 ${className}`}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.Content>
+  );
+}
+
+function Label({ className, htmlFor, children, ...props }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={`block text-sm font-medium mb-1 text-white/80 ${className}`}
+      {...props}
+    >
+      {children}
+    </label>
+  );
+}
+
+function Input({ className, prefix, suffix, ...props }) {
+  return (
+    <div className="relative">
+      {prefix && (
+        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60">
+          {prefix}
+        </span>
+      )}
+      <input
+        className={`w-full bg-white/5 border border-white/10 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent ${
+          prefix ? 'pl-10' : ''
+        } ${suffix ? 'pr-10' : ''} ${className}`}
+        {...props}
+      />
+      {suffix && (
+        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60">
+          {suffix}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function Slider({ className, ...props }) {
+  return (
+    <SliderPrimitive.Root
+      className={`relative flex items-center select-none touch-none h-5 w-full ${className}`}
+      {...props}
+    >
+      <SliderPrimitive.Track className="bg-white/10 relative grow rounded-full h-1">
+        <SliderPrimitive.Range className="absolute bg-pink-600 rounded-full h-full" />
+      </SliderPrimitive.Track>
+      <SliderPrimitive.Thumb className="block w-5 h-5 bg-white rounded-full shadow-md focus:outline-none focus:ring-2 focus:ring-pink-500" />
+    </SliderPrimitive.Root>
+  );
+}
+
+export default App;
